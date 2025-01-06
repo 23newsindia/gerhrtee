@@ -39,9 +39,7 @@ class MACP_Used_CSS_Table {
         update_option($this->db_version_key, $this->db_version);
     }
 
-    public function drop_table() {
-        global $wpdb;
-        $wpdb->query("DROP TABLE IF EXISTS {$this->table_name}");
-        delete_option($this->db_version_key);
+    public function get_table_name() {
+        return $this->table_name;
     }
 }

@@ -75,12 +75,39 @@ class MACP_Plugin {
         if (get_option('macp_enable_varnish', 0)) {
             $this->varnish = new MACP_Varnish();
         }
+      
+      
+      // Initialize CSS optimization if enabled   
+       if (get_option('macp_remove_unused_css', 0)) {
+            add_action('template_redirect', [$this, 'init_css_optimization']);
+        }
+      
+      
         $this->varnish_settings = new MACP_Varnish_Settings();
 
         $this->init_hooks();
         
         MACP_Debug::log('Plugin initialized');
     }
+  
+  
+  public function init_css_optimization() {
+        // Skip for admin pages
+        if (is_admin()) {
+            return;
+        }
+
+        // Skip for logged-in users
+        if (is_user_logged_in()) {
+            return;
+        }
+
+        $css_optimizer = new MACP_CSS_Optimizer();
+        ob_start([$css_optimizer, 'optimize']);
+    }
+
+  
+  
   
    private function init_css_optimizers() {
         // Initialize CSS optimizer for unused CSS removal
@@ -125,7 +152,8 @@ class MACP_Plugin {
         // Create cache directories
         $cache_dirs = [
             WP_CONTENT_DIR . '/cache/macp',
-            WP_CONTENT_DIR . '/cache/min'
+            WP_CONTENT_DIR . '/cache/min',
+            WP_CONTENT_DIR . '/cache/macp/used-css' // Add used-css directory
         ];
         
         foreach ($cache_dirs as $dir) {
@@ -134,6 +162,11 @@ class MACP_Plugin {
                 file_put_contents($dir . '/index.php', '<?php // Silence is golden');
             }
         }
+      
+      // Create database table
+        $used_css_table = new MACP_Used_CSS_Table();
+        $used_css_table->create_table();
+        
         
         // Set default options
         add_option('macp_enable_html_cache', 1);
@@ -147,6 +180,7 @@ class MACP_Plugin {
         add_option('macp_varnish_port', 6081);
         add_option('macp_enable_critical_css', 0);
         add_option('macp_minify_css', 0);
+        add_option('macp_remove_unused_css', 0);
     }
 
     public function deactivate() {
