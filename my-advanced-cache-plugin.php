@@ -17,6 +17,15 @@ if (file_exists(MACP_PLUGIN_DIR . 'vendor/autoload.php')) {
     require_once MACP_PLUGIN_DIR . 'vendor/autoload.php';
 }
 
+
+// Load installer first
+require_once MACP_PLUGIN_DIR . 'includes/class-macp-installer.php';
+
+// Register activation hook
+register_activation_hook(__FILE__, ['MACP_Installer', 'install']);
+
+
+
 // Load utility classes first
 require_once MACP_PLUGIN_DIR . 'includes/class-macp-debug.php';
 require_once MACP_PLUGIN_DIR . 'includes/class-macp-filesystem.php';
@@ -99,6 +108,15 @@ require_once MACP_PLUGIN_DIR . 'includes/critical-css/class-macp-css-fetcher.php
 require_once MACP_PLUGIN_DIR . 'includes/critical-css/class-macp-css-processor.php';
 require_once MACP_PLUGIN_DIR . 'includes/critical-css/class-macp-critical-css.php';
 
+
+
+
+require_once MACP_PLUGIN_DIR . 'includes/css/processors/class-macp-css-processor-manager.php';
+
+
+require_once MACP_PLUGIN_DIR . 'includes/css/processors/class-macp-css-queue-processor.php';
+
+
 // Load CSS parsers
 require_once MACP_PLUGIN_DIR . 'includes/css/parsers/class-macp-css-selector-parser.php';
 
@@ -125,8 +143,6 @@ require_once MACP_PLUGIN_DIR . 'includes/class-macp-plugin.php';
 
 // AJAX LOAD
 require_once MACP_PLUGIN_DIR . 'includes/ajax/class-macp-css-test-ajax.php';
-
-
 
 
 
