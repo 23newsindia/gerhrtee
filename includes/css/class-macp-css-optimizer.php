@@ -1,48 +1,68 @@
 <?php
+/**
+ * Main CSS optimization controller
+ */
 class MACP_CSS_Optimizer {
-    private $processor;
-    private $used_css_table;
+    private $extractor;
+    private $minifier;
+    private $fetcher;
+    private $storage;
+    private $debug;
 
     public function __construct() {
-        $this->processor = new MACP_CSS_Processor();
-        $this->used_css_table = new MACP_Used_CSS_Table();
-        
-        // Create table if not exists
-        add_action('init', [$this->used_css_table, 'create_table']);
+        $this->extractor = new MACP_CSS_Extractor();
+        $this->minifier = new MACP_CSS_Minifier();
+        $this->fetcher = new MACP_CSS_Fetcher();
+        $this->storage = new MACP_Used_CSS_Storage();
+        $this->debug = new MACP_Debug();
     }
 
-     public function optimize($html) {
+    public function optimize($html) {
         if (!$this->should_process()) {
-            MACP_Debug::log('Skipping CSS optimization - conditions not met');
+            $this->debug->log('Skipping CSS optimization - conditions not met');
             return $html;
         }
-       
-       try {
+
+        try {
             $url = $this->get_current_url();
-            MACP_Debug::log('Starting CSS optimization for URL: ' . $url);
+            $this->debug->log('Starting CSS optimization for URL: ' . $url);
+
+            // Check if we have cached optimized CSS
+            $cached_css = $this->storage->get_used_css($url);
+            if ($cached_css) {
+                $this->debug->log('Using cached optimized CSS');
+                return $this->replace_css($html, $cached_css);
+            }
 
             // Extract and process CSS files
             $css_files = $this->extractor->extract_css_files($html);
-            MACP_Debug::log('Found CSS files:', $css_files);
+            $this->debug->log('Found CSS files:', $css_files);
 
             $used_selectors = $this->extractor->extract_used_selectors($html);
-            MACP_Debug::log('Found used selectors: ' . count($used_selectors));
+            $this->debug->log('Found used selectors: ' . count($used_selectors));
 
-            $optimized_css = $this->process_css($url, $html);
-            
-            if (!empty($optimized_css)) {
-                MACP_Debug::log('Successfully optimized CSS');
-                $html = $this->replace_css($html, $optimized_css);
-            } else {
-                MACP_Debug::log('No CSS was optimized');
+            $optimized_css = '';
+            foreach ($css_files as $file) {
+                $css_content = $this->fetcher->get_css_content($file);
+                if (!$css_content) continue;
+                
+                $optimized_css .= $this->minifier->remove_unused_css($css_content, $used_selectors);
             }
 
+            if (!empty($optimized_css)) {
+                $this->debug->log('Successfully optimized CSS');
+                $this->storage->save($url, $optimized_css);
+                return $this->replace_css($html, $optimized_css);
+            }
+
+            $this->debug->log('No CSS was optimized');
             return $html;
+
         } catch (Exception $e) {
-            MACP_Debug::log('CSS optimization error: ' . $e->getMessage());
+            $this->debug->log('CSS optimization error: ' . $e->getMessage());
             return $html;
         }
-
+    }
 
     private function should_process() {
         // Skip if not enabled
@@ -64,7 +84,19 @@ class MACP_CSS_Optimizer {
     }
 
     private function get_current_url() {
-        global $wp;
-        return home_url($wp->request);
+        return MACP_URL_Helper::get_current_url();
+    }
+
+    private function replace_css($html, $optimized_css) {
+        // Remove original CSS links
+        $html = preg_replace('/<link[^>]*rel=["\']stylesheet["\'][^>]*>/i', '', $html);
+
+        // Add optimized CSS
+        $css_tag = sprintf(
+            '<style id="macp-optimized-css">%s</style>',
+            $optimized_css
+        );
+
+        return str_replace('</head>', $css_tag . '</head>', $html);
     }
 }

@@ -77,10 +77,18 @@ class MACP_Plugin {
         }
       
       
-      // Initialize CSS optimization if enabled   
-       if (get_option('macp_remove_unused_css', 0)) {
-            add_action('template_redirect', [$this, 'init_css_optimization']);
-        }
+     // Initialize CSS optimization if enabled
+if (get_option('macp_remove_unused_css', 0)) {
+    add_action('template_redirect', function() {
+        $this->init_css_optimization();
+    });
+
+    // Initialize CSS processing
+    new MACP_CSS_Processor_Manager();
+    new MACP_CSS_Queue_Processor();
+}
+      
+  
       
       
         $this->varnish_settings = new MACP_Varnish_Settings();

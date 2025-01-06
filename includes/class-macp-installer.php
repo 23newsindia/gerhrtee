@@ -7,8 +7,32 @@ class MACP_Installer {
     }
 
     private static function create_database_tables() {
-        $used_css_table = new MACP_Used_CSS_Table();
-        $used_css_table->create_table();
+        global $wpdb;
+        
+        $charset_collate = $wpdb->get_charset_collate();
+        $table_name = $wpdb->prefix . 'macp_used_css';
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            url varchar(2000) NOT NULL default '',
+            css longtext default NULL,
+            hash varchar(32) default '',
+            error_code varchar(32) NULL default NULL,
+            error_message longtext NULL default NULL,
+            retries tinyint(1) NOT NULL default 1,
+            is_mobile tinyint(1) NOT NULL default 0,
+            status varchar(255) NOT NULL default '',
+            modified timestamp NOT NULL default CURRENT_TIMESTAMP,
+            last_accessed timestamp NOT NULL default CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY url (url(150), is_mobile),
+            KEY modified (modified),
+            KEY last_accessed (last_accessed),
+            KEY hash (hash)
+        ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
         
         MACP_Debug::log('Database tables created');
     }
